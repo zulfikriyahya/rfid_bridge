@@ -6,22 +6,25 @@ BINARY_NAME="rfid_bridge"
 INSTALL_DIR="$HOME/.local/bin"
 SERVICE_DIR="$HOME/.config/systemd/user"
 
+echo "==> RFID Bridge Installer"
 echo "==> Membuat direktori instalasi..."
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$SERVICE_DIR"
 
 echo "==> Mengambil rilis terbaru dari GitHub..."
-LATEST_URL=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" \
+LATEST_URL=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
   | grep "browser_download_url.*x86_64-unknown-linux-gnu" \
   | cut -d '"' -f 4)
 
 if [ -z "$LATEST_URL" ]; then
-  echo "Gagal menemukan binary rilis terbaru. Cek nama asset di GitHub Releases."
+  echo "ERROR: Gagal menemukan binary rilis terbaru."
+  echo "Pastikan sudah ada Release dengan asset 'x86_64-unknown-linux-gnu' di:"
+  echo "https://github.com/${REPO}/releases"
   exit 1
 fi
 
 echo "==> Mengunduh binary dari: $LATEST_URL"
-curl -L -o "$INSTALL_DIR/$BINARY_NAME" "$LATEST_URL"
+curl -fsSL -o "$INSTALL_DIR/$BINARY_NAME" "$LATEST_URL"
 chmod +x "$INSTALL_DIR/$BINARY_NAME"
 
 echo "==> Menulis unit file systemd (user service)..."
@@ -47,12 +50,17 @@ systemctl --user daemon-reload
 echo "==> Enable service supaya jalan otomatis saat login..."
 systemctl --user enable rfid-bridge.service
 
-echo "==> Enable lingering supaya service tetap jalan walau belum login (opsional)..."
-sudo loginctl enable-linger "$USER"
+echo "==> Enable lingering (agar service tetap jalan meski belum login manual)..."
+if command -v sudo >/dev/null 2>&1; then
+  sudo loginctl enable-linger "$USER" || echo "Peringatan: gagal enable-linger, mungkin butuh password sudo interaktif. Jalankan manual: sudo loginctl enable-linger \$USER"
+fi
 
 echo "==> Menjalankan service sekarang..."
 systemctl --user start rfid-bridge.service
 
 echo ""
+echo "=================================================="
 echo "Instalasi selesai."
-echo "Cek status dengan: systemctl --user status rfid-bridge.service"
+echo "Cek status  : systemctl --user status rfid-bridge.service"
+echo "Lihat log   : journalctl --user -u rfid-bridge.service -f"
+echo "=================================================="
