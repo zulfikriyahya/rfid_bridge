@@ -1,24 +1,15 @@
-name: Build
+name: Build and Release
 
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 jobs:
   build:
     strategy:
       matrix:
         include:
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact: rfid_bridge.exe
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact: rfid_bridge
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            artifact: rfid_bridge
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: rfid_bridge
@@ -31,22 +22,17 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install Linux deps
-        if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y libxdo-dev pkg-config libudev-dev
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
-
-      - name: Rename artifact
+      - name: Rename binary
         run: cp target/${{ matrix.target }}/release/${{ matrix.artifact }} rfid_bridge-${{ matrix.target }}
 
-      - name: Upload to release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: rfid_bridge-${{ matrix.target }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
