@@ -6,36 +6,52 @@ on:
       - "v*"
 
 permissions:
-  contents: write # <-- WAJIB ditambahkan, ini yang sering kelupaan
+  contents: write
 
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: rfid_bridge
+            asset_name: rfid_bridge-linux-x86_64
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: rfid_bridge.exe
+            asset_name: rfid_bridge-windows-x86_64.exe
 
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
       - name: Install Linux deps
-        run: sudo apt-get update && sudo apt-get install -y libxdo-dev pkg-config libudev-dev
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxdo-dev pkg-config libudev-dev
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename binary
-        run: cp target/${{ matrix.target }}/release/${{ matrix.artifact }} rfid_bridge-${{ matrix.target }}
+      - name: Rename binary (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: cp target/${{ matrix.target }}/release/${{ matrix.artifact }} ${{ matrix.asset_name }}
+
+      - name: Rename binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: copy target\${{ matrix.target }}\release\${{ matrix.artifact }} ${{ matrix.asset_name }}
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: rfid_bridge-${{ matrix.target }}
+          files: ${{ matrix.asset_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
