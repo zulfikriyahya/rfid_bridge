@@ -3,7 +3,10 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
+
+permissions:
+  contents: write # <-- WAJIB ditambahkan, ini yang sering kelupaan
 
 jobs:
   build:
