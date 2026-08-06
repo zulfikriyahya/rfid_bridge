@@ -42,3 +42,11 @@ jobs:
         with:
           name: ${{ matrix.target }}
           path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
+
+      - name: Rename artifact
+        run: cp target/${{ matrix.target }}/release/${{ matrix.artifact }} rfid_bridge-${{ matrix.target }}
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: rfid_bridge-${{ matrix.target }}
