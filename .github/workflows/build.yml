@@ -41,7 +41,7 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename binary (Linux/macOS)
+      - name: Rename binary (Linux)
         if: matrix.os != 'windows-latest'
         run: cp target/${{ matrix.target }}/release/${{ matrix.artifact }} ${{ matrix.asset_name }}
 
@@ -49,9 +49,25 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: copy target\${{ matrix.target }}\release\${{ matrix.artifact }} ${{ matrix.asset_name }}
 
-      - name: Upload to GitHub Release
+      # Ganti upload release -> upload artifact biasa
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.asset_name }}
+          files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
